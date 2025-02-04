@@ -63,23 +63,56 @@ class SpotifyGestureController:
 
     def update_playback_info(self):
         try:
+        # Single API call to get current playback state
             current_playback = self.sp.current_playback()
+        
             if current_playback and current_playback['item']:
                 track = current_playback['item']
                 album_url = track['album']['images'][0]['url'] if track['album']['images'] else None
                 duration_ms = track['duration_ms']
                 progress_ms = current_playback['progress_ms']
-                
+            
+            # Update main player info
                 self.interface.update_song_info(
-                    track['name'],
-                    track['artists'][0]['name'],
-                    album_url,
-                    duration_ms / 1000
+                track['name'],
+                track['artists'][0]['name'],
+                album_url,
+                duration_ms / 1000
                 )
                 self.interface.update_progress(progress_ms / duration_ms)
                 self.interface.update_time(progress_ms / 1000, duration_ms / 1000)
+            
+            # Update shuffle state if available
+                if 'shuffle_state' in current_playback:
+                    self.interface.update_shuffle_state(current_playback['shuffle_state'])
+            
+            # Update queue less frequently (every 5 seconds)
+                current_time = time.time()
+                if not hasattr(self, 'last_queue_update') or current_time - self.last_queue_update >= 10.0:
+                    try:
+                        queue = self.sp.queue()
+                        if queue and 'queue' in queue:
+                            self.interface.update_queue(queue['queue'])
+                        self.last_queue_update = current_time
+                    except Exception as e:
+                        print(f"Error updating queue: {e}")
+                    
         except Exception as e:
-            pass
+            pass  # Silently handle any Spotify API errors
+        
+    def toggle_shuffle(self):
+        try:
+        # Get current playback state
+            playback = self.sp.current_playback()
+            if playback:
+            # Toggle shuffle state
+                new_state = not playback['shuffle_state']
+                self.sp.shuffle(new_state)
+                print(f"🔀 Shuffle {'enabled' if new_state else 'disabled'}")
+            # Update the interface
+                self.interface.update_shuffle_state(new_state)
+        except Exception as e:
+                print(f"Shuffle error: {e}")
 
     def process_frame(self):
         event = leapc.ffi.new("LEAP_CONNECTION_MESSAGE *")
@@ -152,8 +185,8 @@ class SpotifyGestureController:
             print("\nExiting...")
 
 if __name__ == "__main__":
-    controller = SpotifyGestureController()
-    playlist_uri = "spotify:playlist:37i9dQZF1DX8qqIDAkKiQg?si=0ec542b8c5bd42dc"
+    controller = SpotifyGestureController() 
+    playlist_uri = "spotify:playlist:37i9dQZF1DZ06evO03FbPP?si=fb191383fbc245d9"
     devices = controller.sp.devices()
     if devices['devices']:
         active_device_id = devices['devices'][0]['id']
