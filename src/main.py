@@ -12,6 +12,7 @@ class SpotifyGestureController:
         self.gesture_cooldown = 0.5  
         self.last_hand_state = None
         
+        
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
             client_id="fcb16fa2fada495990afc54f6cf1fbaa",
             client_secret="f732c00d54d7451cb13f969b612a6bb8",
@@ -36,7 +37,7 @@ class SpotifyGestureController:
             raise RuntimeError(f"Failed to open LeapC connection: {result}")
         return connection[0]
 
-    def handle_spotify_action(self, action):
+    def handle_spotify_action(self, action, value=None):
         try:
             if action == "play":
                 self.sp.start_playback()
@@ -52,7 +53,7 @@ class SpotifyGestureController:
             elif action == "previous":
                 self.sp.previous_track()
                 print("⏮️ Previous track")
-            elif action == "volume":
+            elif action == "volume" and value is not None:
                 volume = max(0, min(100, value))  
                 self.sp.volume(volume)
                 self.interface.update_volume(volume)
@@ -113,59 +114,137 @@ class SpotifyGestureController:
                 self.interface.update_shuffle_state(new_state)
         except Exception as e:
                 print(f"Shuffle error: {e}")
+    
+
+    def calculate_finger_distance(self, finger1, finger2):
+        """Calculate the Euclidean distance between two finger tips in millimeters"""
+        dx = finger1.distal.next_joint.x - finger2.distal.next_joint.x
+        dy = finger1.distal.next_joint.y - finger2.distal.next_joint.y
+        dz = finger1.distal.next_joint.z - finger2.distal.next_joint.z
+        return (dx * dx + dy * dy + dz * dz) ** 0.5
+
+    def is_pinch_gesture(self, hand):
+        """Check if thumb and index are pinching while other fingers are extended"""
+        thumb = hand.digits[0]
+        index = hand.digits[1]
+        
+        # Check if other three fingers are extended
+        other_fingers_extended = all(hand.digits[i].is_extended for i in range(2, 5))
+        
+        if not other_fingers_extended:
+            return False
+        
+        # Calculate distance between thumb and index tips
+        distance = self.calculate_finger_distance(thumb, index)
+        
+        # 30mm (3cm) threshold for pinch detection
+        return distance < 30
+
+    def handle_volume_control(self, hand, is_pinching):
+        """
+        Clutch-style volume control:
+        - When pinch starts: record current hand height and volume
+        - While pinching: adjust volume based on height difference
+        - When pinch ends: maintain last volume
+        """
+        if is_pinching:
+            # Initialize reference points if we just started pinching
+            if not hasattr(self, 'pinch_reference'):
+                self.pinch_reference = {
+                    'height': hand.palm.position.y,
+                    'volume': getattr(self, 'current_volume', 50)
+                }
+                print("\nVolume control engaged!")
+                return
+
+            # Calculate height difference from pinch start position
+            height_diff = hand.palm.position.y - self.pinch_reference['height']
+            
+            # Scale the movement and round to nearest 10%
+            volume_change = (height_diff / 200.0) * 100
+            # Round to nearest 10%
+            new_volume = round((self.pinch_reference['volume'] + volume_change) / 10.0) * 10
+            new_volume = max(0, min(100, new_volume))
+            
+            # Only update if volume changed by 10%
+            if abs(new_volume - getattr(self, 'current_volume', 0)) >= 10:
+                self.current_volume = new_volume
+                self.handle_spotify_action("volume", value=int(new_volume))
+                
+        else:
+            # If we were previously pinching, clean up
+            if hasattr(self, 'pinch_reference'):
+                print("\nVolume control disengaged!")
+                delattr(self, 'pinch_reference')
 
     def process_frame(self):
         event = leapc.ffi.new("LEAP_CONNECTION_MESSAGE *")
         result = leapc.libleapc.LeapPollConnection(self.controller, 1000, event)
-    
+
         if result != 0 or event.type != leapc.libleapc.eLeapEventType_Tracking:
             return
 
         tracking_event = leapc.ffi.cast("LEAP_TRACKING_EVENT *", event.tracking_event)
         if tracking_event.nHands == 0:
+            # Reset volume control state when no hands are detected
+            if hasattr(self, 'pinch_reference'):
+                delattr(self, 'pinch_reference')
             return
 
         hand = tracking_event.pHands[0]
-    
-        velocity_x = hand.palm.velocity.x
-        fingers_extended = sum(1 for i in range(5) if hand.digits[i].is_extended)
-        hand_closed = fingers_extended <= 2
         current_time = time.time()
 
-        print(f"\rFingers: {fingers_extended}, Velocity: {velocity_x:>6.1f}, {'CLOSED' if hand_closed else 'OPEN '}", end="")
-    
-        self.velocity_history = getattr(self, 'velocity_history', [])
-        self.velocity_history.append(velocity_x)
-        if len(self.velocity_history) > 5:  
-            self.velocity_history.pop(0)
-    
-        avg_velocity = sum(self.velocity_history) / len(self.velocity_history)
-    
-        VELOCITY_THRESHOLD = 800  
-        MIN_GESTURE_DURATION = 0.1  
-    # Track the start of a potential swipe
-        if abs(avg_velocity) > VELOCITY_THRESHOLD:
-            if not hasattr(self, 'swipe_start_time'):
-                self.swipe_start_time = current_time
-                self.swipe_direction = 1 if avg_velocity > 0 else -1
-        else:
-            if hasattr(self, 'swipe_start_time'):
-            # Check if the swipe was maintained long enough
-                if (current_time - self.swipe_start_time >= MIN_GESTURE_DURATION and 
-                    current_time - self.last_gesture_time >= self.gesture_cooldown):
-                    self.handle_spotify_action("next" if self.swipe_direction > 0 else "previous")
-                    self.last_gesture_time = current_time
-                delattr(self, 'swipe_start_time')
-                delattr(self, 'swipe_direction')
+        # Check for pinch gesture first
+        is_pinching = self.is_pinch_gesture(hand)
+        
+        # Handle volume control with clutch behavior
+        self.handle_volume_control(hand, is_pinching)
+        
+        # Only process other gestures if we're not in volume control mode
+        if not is_pinching and not hasattr(self, 'pinch_reference'):
+            velocity_x = hand.palm.velocity.x
+            fingers_extended = sum(1 for i in range(5) if hand.digits[i].is_extended)
+            hand_closed = fingers_extended <= 2
+            
+            # Original gesture handling code
+            self.velocity_history = getattr(self, 'velocity_history', [])
+            self.velocity_history.append(velocity_x)
+            if len(self.velocity_history) > 5:
+                self.velocity_history.pop(0)
+            
+            avg_velocity = sum(self.velocity_history) / len(self.velocity_history)
+            
+            VELOCITY_THRESHOLD = 800  
+            MIN_GESTURE_DURATION = 0.1  
 
-    # Handle play/pause with minimal delay
-        if current_time - self.last_gesture_time >= self.gesture_cooldown:
-            if self.last_hand_state is None:
-                self.last_hand_state = hand_closed
-            elif hand_closed != self.last_hand_state:
-                self.handle_spotify_action("pause" if hand_closed else "play")
-                self.last_hand_state = hand_closed
-                self.last_gesture_time = current_time
+            # Track the start of a potential swipe
+            if abs(avg_velocity) > VELOCITY_THRESHOLD:
+                if not hasattr(self, 'swipe_start_time'):
+                    self.swipe_start_time = current_time
+                    self.swipe_direction = 1 if avg_velocity > 0 else -1
+            else:
+                if hasattr(self, 'swipe_start_time'):
+                    if (current_time - self.swipe_start_time >= MIN_GESTURE_DURATION and 
+                        current_time - self.last_gesture_time >= self.gesture_cooldown):
+                        self.handle_spotify_action("next" if self.swipe_direction > 0 else "previous")
+                        self.last_gesture_time = current_time
+                    delattr(self, 'swipe_start_time')
+                    delattr(self, 'swipe_direction')
+
+            # Handle play/pause with minimal delay
+            if current_time - self.last_gesture_time >= self.gesture_cooldown:
+                if self.last_hand_state is None:
+                    self.last_hand_state = hand_closed
+                elif hand_closed != self.last_hand_state:
+                    self.handle_spotify_action("pause" if hand_closed else "play")
+                    self.last_hand_state = hand_closed
+                    self.last_gesture_time = current_time
+            
+            print(f"\rFingers: {fingers_extended}, Velocity: {velocity_x:>6.1f}, {'CLOSED' if hand_closed else 'OPEN '}", end="")
+        else:
+            # Show volume control status
+            current_volume = getattr(self, 'current_volume', 0)
+            print(f"\rVolume Control: {int(current_volume)}% {'[ACTIVE]' if is_pinching else '[RELEASED]'}", end="")
 
     def run(self):
         print("Starting gesture control. Press Ctrl+C to exit.")

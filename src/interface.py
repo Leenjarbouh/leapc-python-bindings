@@ -5,7 +5,6 @@ from PIL import Image, ImageTk
 import requests
 from io import BytesIO
 
-
 class LeapInterface(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -28,8 +27,6 @@ class LeapInterface(tk.Tk):
 
         self.create_main_layout()
 
-    # In interface.py, modify the create_main_layout method:
-
     def create_main_layout(self):
     # Split into left (player) and right (queue) panels
         self.main_container = ttk.Frame(self)
@@ -40,9 +37,9 @@ class LeapInterface(tk.Tk):
         self.player_frame.pack(side='left', padx=(0, 20), fill='both', expand=True)
 
     # Right panel - Queue
-        self.queue_frame = ttk.Frame(self.main_container, width=300)  # Set width here
+        self.queue_frame = ttk.Frame(self.main_container, width=300)  
         self.queue_frame.pack(side='right', fill='both', padx=(20, 0))
-        self.queue_frame.pack_propagate(False)  # Prevent the frame from shrinking
+        self.queue_frame.pack_propagate(False)  
 
     # Queue header
         self.queue_header = ttk.Label(
@@ -53,9 +50,7 @@ class LeapInterface(tk.Tk):
     )
         self.queue_header.pack(anchor='w', pady=(0, 10))
 
-    # Rest of the method remains the same...
-
-        # Queue list container with scrollbar
+        
         self.queue_canvas = tk.Canvas(
             self.queue_frame,
             bg=self.BACKGROUND,
