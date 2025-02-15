@@ -19,4 +19,4 @@ leapc-cffi/src/leapc_cffi/*.so
 
 *.pyc
 *.pyd
-.cache
+src/.cache
