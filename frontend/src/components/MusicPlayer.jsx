@@ -194,40 +194,65 @@ const MusicPlayer = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto">
-          {/* Now Playing View */}
-          <div className="p-8 flex flex-col items-center">
-            {/* Album Art */}
-            <img 
-              src={playbackState.album_url || '/api/placeholder/400/400'} 
-              alt="Album Cover"
-              className="w-64 h-64 shadow-2xl rounded mb-4"
-            />
-            
-            {/* Track Info */}
-            <div className="text-center mb-4">
-              <h1 className="text-5xl font-bold text-white mb-2">{playbackState.track}</h1>
-              <p className="text-xl text-zinc-400 mb-2">{playbackState.artist}</p>
-              {playbackState.description && (
-                <p className="text-md text-zinc-500">
-                  {playbackState.description}
-                </p>
-              )}
+          {/* Instructions View */}
+          <div className="h-full flex flex-col items-center max-w-2xl mx-auto mt-24">
+            <h1 className="text-5xl font-bold text-white mb-12">Welcome to Cookify!</h1>
+            <div className="space-y-8">
+              <p className="text-xl text-zinc-400 text-center">
+                Use hand gestures to control your music:
+              </p>
+              <ul className="space-y-6">
+                <li className="flex items-center space-x-4 text-lg">
+                  <span className="text-green-500 text-2xl">→</span>
+                  <span className="text-zinc-300">Swipe right to play the next song</span>
+                </li>
+                <li className="flex items-center space-x-4 text-lg">
+                  <span className="text-green-500 text-2xl">←</span>
+                  <span className="text-zinc-300">Swipe left to play the previous song</span>
+                </li>
+                <li className="flex items-center space-x-4 text-lg">
+                  <span className="text-green-500 text-2xl">✊</span>
+                  <span className="text-zinc-300">Close your palm to pause</span>
+                </li>
+                <li className="flex items-center space-x-4 text-lg">
+                  <span className="text-green-500 text-2xl">✋</span>
+                  <span className="text-zinc-300">Open your palm to play</span>
+                </li>
+                <li className="flex items-center space-x-4 text-lg">
+                  <span className="text-green-500 text-2xl">👌</span>
+                  <span className="text-zinc-300">Pinch and move up/down to control volume</span>
+                </li>
+              </ul>
             </div>
-            
-            {/* Instructions */}
-            <p className="text-white text-sm leading-relaxed max-w-2xl text-center">
-              Welcome to Cookify. Swipe right to go to the next song, left to the previous song. 
-              Close your palm to pause the music and open your palm to resume it. 
-              Pinch your index finger and your thumb while keeping the other fingers open and 
-              swipe vertically up to increase the volume and down to decrease it. 
-              Let go of the pinching if you're satisfied with the volume!
-            </p>
           </div>
         </div>
 
         {/* Right Sidebar - Queue */}
         <div className="w-96 bg-black p-6 overflow-y-auto">
-          <h2 className="text-white text-xl font-bold mb-4">Queue</h2>
+          <div className="border-b border-green-500 pb-1 mb-4 w-16">
+            <h2 className="text-white text-xl font-bold">Queue</h2>
+          </div>
+          
+          {/* Now Playing Section */}
+          <div className="mb-6">
+            <h3 className="text-sm text-zinc-400 mb-4">Now playing</h3>
+            <div className="flex items-center space-x-3">
+              <img 
+                src={playbackState.album_url || '/api/placeholder/48/48'} 
+                alt="Current Track" 
+                className="w-12 h-12 rounded"
+              />
+              <div>
+                <div className="text-green-500 font-medium text-sm">
+                  {playbackState.track}
+                </div>
+                <div className="text-zinc-400 text-sm">
+                  {playbackState.artist}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <QueueList />
         </div>
       </div>
