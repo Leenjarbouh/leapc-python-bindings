@@ -62,7 +62,7 @@ const QueueList = () => {
     };
 
     fetchQueue();
-    const interval = setInterval(fetchQueue, 5000);
+    const interval = setInterval(fetchQueue, 1000); // More frequent updates
     return () => clearInterval(interval);
   }, []);
 
@@ -77,6 +77,14 @@ const QueueList = () => {
           key={`${track.name}-${index}`}
           className="flex items-center space-x-3 p-2 rounded hover:bg-zinc-800/50 transition-colors group"
         >
+          {/* Queue Number */}
+          <div className="flex-shrink-0 w-6 text-center">
+            <span className="text-sm font-medium text-zinc-500 group-hover:text-green-500">
+              {index + 1}
+            </span>
+          </div>
+
+          {/* Album Art */}
           {track.album_art && (
             <img 
               src={track.album_art} 
@@ -84,6 +92,8 @@ const QueueList = () => {
               className="w-10 h-10 rounded"
             />
           )}
+
+          {/* Track Info */}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-white truncate group-hover:text-green-500">
               {track.name}
@@ -92,6 +102,8 @@ const QueueList = () => {
               {track.artist}
             </div>
           </div>
+
+          {/* Duration */}
           <div className="text-xs text-zinc-500">
             {Math.floor(track.duration_ms / 60000)}:
             {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
@@ -117,7 +129,9 @@ const MusicPlayer = () => {
   const [isPinching, setIsPinching] = useState(false);
   const [gestureState, setGestureState] = useState({
     handClosed: false,
-    swipeDirection: null
+    swipeDirection: null,
+    lastGesture: null,
+    gestureTimestamp: null
   });
 
   
@@ -175,6 +189,8 @@ const MusicPlayer = () => {
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black">

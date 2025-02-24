@@ -12,6 +12,7 @@ class SpotifyGestureController:
         self.gesture_cooldown = 0.5  
         self.last_hand_state = None
         self.last_status = 'inactive'
+        self.swipe_direction = None  # Add this line
 
         self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
             client_id="fcb16fa2fada495990afc54f6cf1fbaa",

@@ -257,7 +257,8 @@ def get_status():
             'hand_status': controller.last_status,
             'current_volume': controller.current_volume,
             'is_pinching': hasattr(controller, 'pinch_reference'),
-            'last_hand_state': controller.last_hand_state
+            'last_hand_state': controller.last_hand_state,
+            
         }))
         return response
     except Exception as e:
@@ -306,9 +307,9 @@ def process_frames():
 @app.route('/api/queue', methods=['GET'])
 def get_queue():
     try:
-        # Get current playback
-        playback = controller.sp.current_playback()
-        if not playback:
+        # Get current playback to determine the current track
+        current_playback = controller.sp.current_playback()
+        if not current_playback:
             return jsonify({'error': 'No active playback'})
 
         # Get queue
@@ -323,11 +324,13 @@ def get_queue():
                 'name': item['name'],
                 'artist': item['artists'][0]['name'] if item['artists'] else 'Unknown Artist',
                 'duration_ms': item['duration_ms'],
-                'album_art': item['album']['images'][0]['url'] if item['album']['images'] else None
+                'album_art': item['album']['images'][-1]['url'] if item['album']['images'] else None,
+                'id': item['id']  # Include track ID for better tracking
             })
 
         response = make_response(jsonify({
-            'queue': formatted_queue
+            'queue': formatted_queue,
+            'current_track_id': current_playback['item']['id'] if current_playback['item'] else None
         }))
         return response
     except Exception as e:
