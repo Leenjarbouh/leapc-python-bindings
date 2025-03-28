@@ -65,12 +65,6 @@ In a new terminal, navigate to the frontend directory: cd frontend
 Run: npm start
 The application should open in your browser at http://localhost:3000
 
-Alternatively, test the standalone application:
-Navigate to the backend directory: cd backend
-Run: python main.py
-A Tkinter window should appear with the Cookify interface
-
-
 Test the gesture controls:
 Position your hand above the Leap Motion device
 Open palm: Play music
