@@ -8,8 +8,7 @@ First-Time Setup
 After installing and building the application (see README.md):
 
 Start the backend server: python server.py in the backend directory
-Start the frontend application: npm start in the frontend directory, or
-Start the standalone application: python main.py in the backend directory
+Start the frontend application: npm start in the frontend directory
 
 On first launch, you'll need to authenticate with Spotify:
 
