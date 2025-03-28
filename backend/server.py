@@ -299,7 +299,7 @@ def process_frames():
             break
         except Exception as e:
             print(f"Error in frame processing: {str(e)}")
-            print("Full error details:", traceback.format_exc())  # Add this line
+            print("Full error details:", traceback.format_exc())  
             time.sleep(1)  # Longer sleep on error
 
 
@@ -359,7 +359,6 @@ def start_playlist():
         print(f"Error starting playlist: {e}")
         return jsonify({'error': str(e)})
     
-    # Add this to your server.py
 
 @app.route('/api/spotify/init', methods=['GET'])
 def init_spotify():
@@ -383,7 +382,7 @@ def init_spotify():
         device_id = devices['devices'][0]['id']
 
         # Start default playlist
-        playlist_uri = "spotify:playlist:37i9dQZF1DZ06evO03FbPP"  # Your playlist URI
+        playlist_uri = "spotify:playlist:37i9dQZF1DZ06evO03FbPP"  #  playlist URI
         controller.sp.start_playback(device_id=device_id, context_uri=playlist_uri)
 
         return jsonify({
@@ -426,7 +425,7 @@ def spotify_status():
         })
 
 if __name__ == '__main__':
-    import traceback  # Add this at the top with other imports
+    import traceback 
     
     try:
         # Initialize LeapC polling thread
